@@ -2,6 +2,9 @@
 
 Converts AlphaFold distograms into distance matrices and saves them into a number of formats.
 
+The distances here are obtained by passing the distogram logits through a softmax function, then performing a linear combination between the distogram bin edges $edge$ and the softmax output $softD$ for each bin $b$:
+
+ $$ \sum_{b=0}^B softD_b * edge_b $$
 
 # Usage 
 
