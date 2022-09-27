@@ -6,7 +6,7 @@ The distances for the $i$-th residue are obtained by passing the distogram logit
 
  $$ dist_i = \sum_{b=0}^B {softD^i}_b * edge_b $$
 
-Distances calculated this way agree quite well with the actual $C\alpha$ distances extracted from a model (up until 20 $\AA$ ). 
+Distances calculated this way agree quite well with the actual $C\alpha$ distances extracted from a model (up until ~20Å). 
 
 ![image](https://user-images.githubusercontent.com/50204363/192532574-9ea05200-e003-47c6-822f-eb9a86bc44cc.png)
 
