@@ -1,6 +1,6 @@
 # dgram2dmap
 
-Converts AlphaFold distograms into distance matrices and saves them into a number of formats.
+Convert AlphaFold distograms into distance matrices and save them into a number of formats.
 
 The distances for the $i$-th residue are obtained by passing the distogram logits through a softmax function, then performing a linear combination between the distogram bin edges $edge$ and the softmax output $softD$ for each bin $b$:
 
@@ -14,7 +14,7 @@ Distances calculated this way agree quite well with the actual $C\alpha$ distanc
 # Usage 
 
 ```
-dgram2dmap.py [-h] [--limits i:j m:n LIMITS] [--chains chain1 chain2] [--plot] [--rosetta] input_folder/
+dgram2dmap.py [-h] [--limits i:j m:n] [--chains chain1 chain2] [--plot] [--rosetta] input_folder/
 
 Extract and format distance constraints from AlphaFold distograms
 
