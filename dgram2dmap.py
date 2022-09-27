@@ -66,7 +66,7 @@ def load_results(filepath):
 
 
 def get_rosetta_constraints(
-    dist_matrix, func_type="HARMONIC", atom_name="CA", SD=1.0, limitA=None, limitB=None
+    dist_matrix, func_type="HARMONIC", atom_name="CA", SD=1.0, chain1="A", chain2="A", limitA=None, limitB=None
 ):
     # AtomPair CZ 20 CA 6 GAUSSIANFUNC 5.54 2.0 TAG
     # AtomPair CZ 20 CA 54 GAUSSIANFUNC 5.27 2.0 TAG
@@ -86,7 +86,7 @@ def get_rosetta_constraints(
             dist = 0.5 * (dist_matrix[i, j] + dist_matrix[j, i])
             if dist < 20:
                 constraints.append(
-                    f"AtomPair {atom_name} {i+1} {atom_name} {j+1} {func_type} {dist:.2f} {SD} TAG\n"
+                    f"AtomPair {atom_name} {i+1}{chain1} {atom_name} {j+1}{chain2} {func_type} {dist:.2f} {SD} TAG\n"
                 )
     return constraints
 
@@ -172,17 +172,18 @@ def main():
 
     features = load_features(f"{args.in_folder}/features.pkl")
 
-    limitA = None
-    limitB = None
+    limitA = limitB = None
+    chain1 = chain2 = "A"
 
     if args.limits:
         limitA = [int(l) for l in args.limits[0].split(":")]
         limitB = [int(l) for l in args.limits[1].split(":")]
     elif args.chains:
         chain_limits = get_chain_limits(features)
-
-        limitA = chain_limits[args.chains[0]]
-        limitB = chain_limits[args.chains[1]]
+        chain1 = args.chains[0]
+        chain2 = args.chains[1]
+        limitA = chain_limits[chain1]
+        limitB = chain_limits[chain2]
 
     pickle_list = glob.glob(f"{args.in_folder}/result_*.pkl")
 
@@ -196,7 +197,7 @@ def main():
 
         if args.rosetta:
             rosetta_constraints = get_rosetta_constraints(
-                dist, limitA=limitA, limitB=limitB
+                dist, chain1=chain1, chain2=chain2, limitA=limitA, limitB=limitB
             )
             with open(f"{pickle_output}.rosetta_constraints", "w") as out:
                 for line in rosetta_constraints:
