@@ -17,6 +17,13 @@ def add_arguments(parser):
         help="AlphaFold model output folder",
     )
     parser.add_argument(
+        "--maxD",
+        help="Maximum distance (in Å) for constraints output",
+        default=20.0,
+        type=float,
+        required=False,
+    )
+    parser.add_argument(
         "--limits",
         help="Select a 'patch' of constraints between two subsets of residues (e.g. 0:100 200:300)",
         nargs=2,
@@ -35,7 +42,7 @@ def add_arguments(parser):
     )
     parser.add_argument(
         "--rosetta",
-        help="Export the distances (< 20 Å) as Rosetta constraint files",
+        help="Export below-threshold (see maxD) distances in a Rosetta constraint files",
         action="store_true",
     )
 
@@ -66,7 +73,7 @@ def load_results(filepath):
 
 
 def get_rosetta_constraints(
-    dist_matrix, func_type="HARMONIC", atom_name="CA", SD=1.0, chain1="A", chain2="A", limitA=None, limitB=None
+    dist_matrix, func_type="HARMONIC", atom_name="CA", maxD=20.0, SD=1.0, chain1="A", chain2="A", limitA=None, limitB=None
 ):
     # AtomPair CZ 20 CA 6 GAUSSIANFUNC 5.54 2.0 TAG
     # AtomPair CZ 20 CA 54 GAUSSIANFUNC 5.27 2.0 TAG
@@ -84,7 +91,7 @@ def get_rosetta_constraints(
     for i in range(x0, x1):
         for j in range(y0, y1):
             dist = 0.5 * (dist_matrix[i, j] + dist_matrix[j, i])
-            if dist < 20:
+            if dist < maxD:
                 constraints.append(
                     f"AtomPair {atom_name} {i+1}{chain1} {atom_name} {j+1}{chain2} {func_type} {dist:.2f} {SD} TAG\n"
                 )
@@ -197,7 +204,7 @@ def main():
 
         if args.rosetta:
             rosetta_constraints = get_rosetta_constraints(
-                dist, chain1=chain1, chain2=chain2, limitA=limitA, limitB=limitB
+                dist, maxD=args.maxD, chain1=chain1, chain2=chain2, limitA=limitA, limitB=limitB
             )
             with open(f"{pickle_output}.rosetta_constraints", "w") as out:
                 for line in rosetta_constraints:
