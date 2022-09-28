@@ -6,9 +6,9 @@ The distances for the $i$-th residue are obtained by passing the distogram logit
 
  $$ dist_i = \sum_{b=0}^B {softD}_{i,b} * edge_b $$
 
-Distances calculated this way agree quite well with the actual $C\alpha$ distances extracted from a model (up until ~20Å). 
+Distances calculated this way agree quite well with the actual $C\alpha$ distances extracted from a model (up until ~20Å). **Provided that the predicted aligned error is low**.
 
-![image](https://user-images.githubusercontent.com/50204363/192532574-9ea05200-e003-47c6-822f-eb9a86bc44cc.png)
+![image](example/distogram_model_agreement.png)
 
 
 # Usage 
@@ -45,6 +45,6 @@ Which will produce the following outputs for each pickle file (see also `example
 
 * `result_model_1_ptm_pred_0.pkl.rosetta_constraints`: rosetta constraint file from selected ranges
 * `result_model_1_ptm_pred_0.pkl.dmap`: CSV file with all distances calculated from the distogram
-* `result_model_1_ptm_pred_0.pkl.dmap.png`: image of the calculated distances with selection range boxes, if any:
+* `result_model_1_ptm_pred_0.pkl.dmap.png`: image of the calculated distances (with selection range boxes, if any). The predicted aligned error is also shown if present:
 
 ![distance map plot](example/result_model_1_ptm_pred_0.pkl.dmap.png)
