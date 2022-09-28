@@ -6,21 +6,21 @@ Converts AlphaFold distograms into distance matrices and saves them into a numbe
 # Usage 
 
 ```
-dgram2dmap.py [-h] [--limits i:j m:n LIMITS] [--chains chain1 chain2] [--plot] [--rosetta] input_folder/
+dgram2dmap.py [-h] [--maxD 20.0] [--limits i:j k:l] [--chains chain1 chain2] [--plot] [--rosetta] in_folder
 
 Extract and format distance constraints from AlphaFold distograms
 
 positional arguments:
-  input_folder             AlphaFold model output folder
+  in_folder             AlphaFold model output folder
 
 optional arguments:
   -h, --help            show this help message and exit
-  --limits i:j m:n
-                        Select a 'patch' of constraints between two subsets of residues (e.g. 0:100 200:300)
+  --maxD 20.0           Maximum distance (in Å) for constraints output
+  --limits i:j k:l      Select a 'patch' of constraints between two subsets of residues (e.g. 0:100 200:300)
   --chains chain1 chain2
                         Extract constraints between two chains (e.g. A B)
   --plot                Plot the distances with bounding boxes
-  --rosetta             Export the distances (< 20 Å) as Rosetta constraint files
+  --rosetta             Export below-threshold (see maxD) distances in a Rosetta constraint files
 ```
 
 Example:
