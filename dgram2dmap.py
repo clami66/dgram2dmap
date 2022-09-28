@@ -50,6 +50,12 @@ def add_arguments(parser):
         help="Export below-threshold (see maxD) distances in a Rosetta constraint files",
         action="store_true",
     )
+    parser.add_argument(
+        "--pdb",
+        help="PDB model of the target protein",
+        required=False,
+        metavar="ranked_0.pdb",
+    )    
 
 
 def get_distance_predictions(results):
@@ -105,7 +111,7 @@ def get_rosetta_constraints(
     return constraints
 
 
-def compare_to_native(pdb_path, predicted_distances):
+def compare_to_native(filepath, pdb_path, predicted_distances):
 
     parser = PDBParser()
     structure = parser.get_structure("model", pdb_path)
@@ -129,8 +135,10 @@ def compare_to_native(pdb_path, predicted_distances):
         np.max([ax.get_xlim(), ax.get_ylim()]),  # max of both axes
     ]
     ax.plot(lims, lims, "k-", alpha=0.75, zorder=0)
-
-    plt.show()
+    ax.title.set_text("Distogram-model distance agreement")
+    ax.set_xlabel("Model Ca-Ca distances")
+    ax.set_ylabel("Distogram converted distances")
+    plt.savefig(filepath)
 
 
 def get_chain_limits(features):
@@ -217,7 +225,7 @@ def main():
     pickle_list = glob.glob(f"{args.in_folder}/result_*.pkl")
 
     for i, pickle_output in enumerate(pickle_list):
-        logging.warning(f"Processing pickle file {i}/{len(pickle_list)}: {pickle_output}")
+        logging.warning(f"Processing pickle file {i+1}/{len(pickle_list)}: {pickle_output}")
         dist, pae = load_results(pickle_output)
         np.savetxt(f"{pickle_output}.dmap", dist)
 
@@ -231,6 +239,9 @@ def main():
             with open(f"{pickle_output}.rosetta_constraints", "w") as out:
                 for line in rosetta_constraints:
                     out.write(line)
+                    
+        if args.pdb:
+            compare_to_native(f"{pickle_output}.agreement.png", args.pdb, dist)
 
 
 if __name__ == "__main__":
