@@ -4,10 +4,12 @@ import string
 import logging
 import argparse
 from sys import argv, exit
+from copy import copy
 import numpy as np
 from scipy.special import softmax
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
+from matplotlib.lines import Line2D
 from Bio.PDB import *
 
 
@@ -22,18 +24,21 @@ def add_arguments(parser):
         default=20.0,
         type=float,
         required=False,
+        metavar="20.0",
     )
     parser.add_argument(
         "--limits",
         help="Select a 'patch' of constraints between two subsets of residues (e.g. 0:100 200:300)",
         nargs=2,
         required=False,
+        metavar=("i:j", "k:l"),
     )
     parser.add_argument(
         "--chains",
         help="Extract constraints between two chains (e.g. A B)",
         nargs=2,
         required=False,
+        metavar=("chain1", "chain2"),
     )
     parser.add_argument(
         "--plot",
@@ -69,14 +74,16 @@ def load_results(filepath):
     with open(filepath, "rb") as p:
         results = pickle.load(p)
         distance_predictions = get_distance_predictions(results)
-    return distance_predictions
+        if "predicted_aligned_error" in results:
+            pae = results["predicted_aligned_error"]
+        else:
+            pae = None
+    return distance_predictions, pae
 
 
 def get_rosetta_constraints(
     dist_matrix, func_type="HARMONIC", atom_name="CA", maxD=20.0, SD=1.0, chain1="A", chain2="A", limitA=None, limitB=None
 ):
-    # AtomPair CZ 20 CA 6 GAUSSIANFUNC 5.54 2.0 TAG
-    # AtomPair CZ 20 CA 54 GAUSSIANFUNC 5.27 2.0 TAG
     constraints = []
     if limitA is not None and limitB is not None:
         x0 = limitA[0]
@@ -140,10 +147,17 @@ def get_chain_limits(features):
     return chain_limits
 
 
-def plot_distances(filepath, distances, limitA=None, limitB=None):
+def plot_distances(filepath, distances, pae=None, limitA=None, limitB=None):
 
-    fig, ax = plt.subplots()
-    ax.imshow(distances)
+    if pae is not None:
+        fig, ax = plt.subplots(1, 2)
+        ax[0].imshow(distances)
+        ax[1].imshow(pae)
+        ax[0].title.set_text("Distance map")
+        ax[1].title.set_text("Predicted aligned error")
+    else:
+        fig, ax = plt.subplots()
+        ax.title.set_text("Distance map")
 
     if limitA and limitB:
         # plots a bounding box if any
@@ -164,8 +178,16 @@ def plot_distances(filepath, distances, limitA=None, limitB=None):
             facecolor="none",
         )
 
-        ax.add_patch(rect1)
-        ax.add_patch(rect2)
+        if pae is not None:
+            rect3 = copy(rect1)
+            rect4 = copy(rect2)
+            ax[0].add_patch(rect1)
+            ax[0].add_patch(rect2)
+            ax[1].add_patch(rect3)
+            ax[1].add_patch(rect4)
+        else:
+            ax.add_patch(rect1)
+            ax.add_patch(rect2)
     plt.savefig(filepath)
     plt.close()
 
@@ -196,11 +218,11 @@ def main():
 
     for i, pickle_output in enumerate(pickle_list):
         logging.warning(f"Processing pickle file {i}/{len(pickle_list)}: {pickle_output}")
-        dist = load_results(pickle_output)
+        dist, pae = load_results(pickle_output)
         np.savetxt(f"{pickle_output}.dmap", dist)
 
         if args.plot:
-            plot_distances(f"{pickle_output}.dmap.png", dist, limitA, limitB)
+            plot_distances(f"{pickle_output}.dmap.png", dist, pae, limitA, limitB)
 
         if args.rosetta:
             rosetta_constraints = get_rosetta_constraints(
