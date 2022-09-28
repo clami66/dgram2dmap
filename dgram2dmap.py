@@ -55,7 +55,7 @@ def add_arguments(parser):
         help="PDB model of the target protein",
         required=False,
         metavar="ranked_0.pdb",
-    )    
+    )
 
 
 def get_distance_predictions(results):
@@ -88,7 +88,15 @@ def load_results(filepath):
 
 
 def get_rosetta_constraints(
-    dist_matrix, func_type="HARMONIC", atom_name="CA", maxD=20.0, SD=1.0, chain1="A", chain2="A", limitA=None, limitB=None
+    dist_matrix,
+    func_type="HARMONIC",
+    atom_name="CA",
+    maxD=20.0,
+    SD=1.0,
+    chain1="A",
+    chain2="A",
+    limitA=None,
+    limitB=None,
 ):
     constraints = []
     if limitA is not None and limitB is not None:
@@ -225,7 +233,9 @@ def main():
     pickle_list = glob.glob(f"{args.in_folder}/result_*.pkl")
 
     for i, pickle_output in enumerate(pickle_list):
-        logging.warning(f"Processing pickle file {i+1}/{len(pickle_list)}: {pickle_output}")
+        logging.warning(
+            f"Processing pickle file {i+1}/{len(pickle_list)}: {pickle_output}"
+        )
         dist, pae = load_results(pickle_output)
         np.savetxt(f"{pickle_output}.dmap", dist)
 
@@ -234,12 +244,17 @@ def main():
 
         if args.rosetta:
             rosetta_constraints = get_rosetta_constraints(
-                dist, maxD=args.maxD, chain1=chain1, chain2=chain2, limitA=limitA, limitB=limitB
+                dist,
+                maxD=args.maxD,
+                chain1=chain1,
+                chain2=chain2,
+                limitA=limitA,
+                limitB=limitB,
             )
             with open(f"{pickle_output}.rosetta_constraints", "w") as out:
                 for line in rosetta_constraints:
                     out.write(line)
-                    
+
         if args.pdb:
             compare_to_native(f"{pickle_output}.agreement.png", args.pdb, dist)
 
