@@ -15,8 +15,7 @@ from Bio.PDB import *
 
 def add_arguments(parser):
     parser.add_argument(
-        "in_folder",
-        help="AlphaFold model output folder",
+        "in_folder", help="AlphaFold model output folder",
     )
     parser.add_argument(
         "--maxD",
@@ -41,9 +40,7 @@ def add_arguments(parser):
         metavar=("chain1", "chain2"),
     )
     parser.add_argument(
-        "--plot",
-        help="Plot the distances with bounding boxes",
-        action="store_true",
+        "--plot", help="Plot the distances with bounding boxes", action="store_true",
     )
     parser.add_argument(
         "--rosetta",
@@ -178,7 +175,7 @@ def plot_distances(filepath, distances, pae=None, limitA=None, limitB=None):
     if limitA and limitB:
         # plots a bounding box if any
         rect1 = patches.Rectangle(
-            (limitA[0], limitB[0]),
+            (limitA[0] - 1, limitB[0] - 1),
             limitA[1] - limitA[0],
             limitB[1] - limitB[0],
             linewidth=1,
@@ -186,7 +183,7 @@ def plot_distances(filepath, distances, pae=None, limitA=None, limitB=None):
             facecolor="none",
         )
         rect2 = patches.Rectangle(
-            (limitB[0], limitA[0]),
+            (limitB[0] - 1, limitA[0] - 1),
             limitB[1] - limitB[0],
             limitA[1] - limitA[0],
             linewidth=1,
@@ -225,8 +222,7 @@ def main():
         limitB = [int(l) for l in args.limits[1].split(":")]
     elif args.chains:
         chain_limits = get_chain_limits(features)
-        chain1 = args.chains[0]
-        chain2 = args.chains[1]
+        chain1, chain2 = args.chains
         limitA = chain_limits[chain1]
         limitB = chain_limits[chain2]
 
