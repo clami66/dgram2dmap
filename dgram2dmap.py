@@ -90,8 +90,8 @@ def get_rosetta_constraints(
     atom_name="CA",
     maxD=20.0,
     SD=1.0,
-    chain1="A",
-    chain2="A",
+    chain1=None,
+    chain2=None,
     limitA=None,
     limitB=None,
 ):
@@ -110,9 +110,14 @@ def get_rosetta_constraints(
         for j in range(y0, y1):
             dist = 0.5 * (dist_matrix[i, j] + dist_matrix[j, i])
             if dist < maxD:
-                constraints.append(
-                    f"AtomPair {atom_name} {i+1}{chain1} {atom_name} {j+1}{chain2} {func_type} {dist:.2f} {SD} TAG\n"
-                )
+                if chain1 and chain2:
+                    constraints.append(
+                        f"AtomPair {atom_name} {i+1-x0}{chain1} {atom_name} {j+1-y0}{chain2} {func_type} {dist:.2f} {SD} TAG\n"
+                    )
+                else:
+                    constraints.append(
+                        f"AtomPair {atom_name} {i+1} {atom_name} {j+1} {func_type} {dist:.2f} {SD} TAG\n"
+                    )
     return constraints
 
 
@@ -215,7 +220,7 @@ def main():
     features = load_features(f"{args.in_folder}/features.pkl")
 
     limitA = limitB = None
-    chain1 = chain2 = "A"
+    chain1 = chain2 = None
 
     if args.limits:
         limitA = [int(l) for l in args.limits[0].split(":")]
