@@ -175,6 +175,7 @@ def plot_distances(filepath, distances, pae=None, limitA=None, limitB=None):
         ax[1].title.set_text("Predicted aligned error")
     else:
         fig, ax = plt.subplots()
+        ax.imshow(distances)
         ax.title.set_text("Distance map")
 
     if limitA and limitB:
