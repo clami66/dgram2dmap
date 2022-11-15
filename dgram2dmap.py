@@ -169,8 +169,8 @@ def plot_distances(filepath, distances, pae=None, msa=None, limitA=None, limitB=
 
     if pae is not None:
         fig, ax = plt.subplots(2, 2)
-        ax[0, 0].imshow(msa)
-        ax[0, 1].imshow(msa)
+        ax[0, 0].imshow(msa[:distances.shape[0], :)
+        ax[0, 1].imshow(msa[:distances.shape[0], :)
         ax[1, 0].imshow(distances)
         ax[1, 1].imshow(pae)
         ax[0, 0].title.set_text("MSA")
@@ -179,7 +179,7 @@ def plot_distances(filepath, distances, pae=None, msa=None, limitA=None, limitB=
         ax[1, 1].title.set_text("Predicted aligned error")
     else:
         fig, ax = plt.subplots(2, 1)
-        ax[0].imshow(msa)
+        ax[0].imshow(msa[:distances.shape[0], :)
         ax[1].imshow(distances)
         ax[1].title.set_text("MSA")
         ax[1].title.set_text("Distance map")
