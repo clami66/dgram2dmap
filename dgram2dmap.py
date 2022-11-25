@@ -121,34 +121,49 @@ def get_rosetta_constraints(
     return constraints
 
 
-def compare_to_native(filepath, pdb_path, predicted_distances):
+def compare_to_native(filepath, pdb_path, predicted_distances, chain1="A", chain2="A", limitA=None, limitB=None):
 
     parser = PDBParser()
     structure = parser.get_structure("model", pdb_path)
 
-    real_dist = np.zeros_like(predicted_distances)
+    compared_dist = np.triu(predicted_distances)
 
-    for i in range(1, predicted_distances.shape[0] + 1):
-        atom1 = structure[0]["A"][i]["CA"]
-        for j in range(i, predicted_distances.shape[0] + 1):
-            atom2 = structure[0]["A"][j]["CA"]
-            real_dist[i - 1, j - 1] = real_dist[j - 1, i - 1] = atom1 - atom2
+    residues = [r for r in structure.get_residues()]
+    
+    for i, residue_i in enumerate(residues):
+        atom1 = residue_i["CA"]
+        for j, residue_j in enumerate(residues):
+            if j < i:
+                atom2 = residue_j["CA"]
+                dist = atom1 - atom2
+                compared_dist[i, j] = min(dist, 22)
 
-    fig1, ax = plt.subplots()
+    if limitA and limitB:
+        predicted_distances = predicted_distances[limitA[0] - 1:limitA[1], limitB[0] - 1:limitB[1]]
+        real_dist = np.zeros_like(predicted_distances)
+        real_dist = np.transpose(compared_dist[limitB[0] - 1:limitB[1], limitA[0] - 1:limitA[1]])
+    else:
+        predicted_distances = np.triu(predicted_distances)
+        real_dist = np.transpose(np.tril(compared_dist))
 
-    ax.set_xlim(0, 20)
-    ax.set_ylim(0, 20)
-    ax.set_box_aspect(1)
-    plt.scatter(real_dist.reshape(-1), predicted_distances.reshape(-1))
+    fig1, ax = plt.subplots(1, 2)
+
+    ax[0].set_xlim(0, 22)
+    ax[0].set_ylim(0, 22)
+    ax[0].set_box_aspect(1)
+    ax[0].scatter(real_dist.reshape(-1), predicted_distances.reshape(-1))
     lims = [
-        np.min([ax.get_xlim(), ax.get_ylim()]),  # min of both axes
-        np.max([ax.get_xlim(), ax.get_ylim()]),  # max of both axes
+        np.min([ax[0].get_xlim(), ax[0].get_ylim()]),  # min of both axes
+        np.max([ax[0].get_xlim(), ax[0].get_ylim()]),  # max of both axes
     ]
-    ax.plot(lims, lims, "k-", alpha=0.75, zorder=0)
-    ax.title.set_text("Distogram-model distance agreement")
-    ax.set_xlabel("Model Ca-Ca distances")
-    ax.set_ylabel("Distogram converted distances")
+    ax[0].plot(lims, lims, "k-", alpha=0.75, zorder=0)
+    ax[0].title.set_text("Distogram-model agreement")
+    ax[0].set_xlabel("Model Ca-Ca distances")
+    ax[0].set_ylabel("Distogram converted distances")
+    
+    ax[1].imshow(compared_dist)
     plt.savefig(filepath)
+    plt.close()
 
 
 def get_chain_limits(features):
@@ -258,7 +273,10 @@ def main():
                     out.write(line)
 
         if args.pdb:
-            compare_to_native(f"{pickle_output}.agreement.png", args.pdb, dist)
+            if args.chains:
+                compare_to_native(f"{pickle_output}.agreement.png", args.pdb, dist, chain1, chain2, limitA, limitB)
+            else:
+                compare_to_native(f"{pickle_output}.agreement.png", args.pdb, dist)
 
 
 if __name__ == "__main__":
