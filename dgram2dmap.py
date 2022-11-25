@@ -65,6 +65,40 @@ def get_distance_predictions(results):
     return distance_predictions
 
 
+def get_chain_limits(features):
+    chain_limits = {"A": (1, features["msa"].shape[1])}
+
+    if "asym_id" in features:  # then it's a multimer
+        chain_ids = features["asym_id"].astype("int")
+        for i in range(chain_ids[-1]):
+            chain_starts = np.where(chain_ids == i + 1)[0][0] + 1
+
+            chain_stops = np.where(chain_ids == i + 1)[0][-1] + 1
+
+            chain_limits[string.ascii_uppercase[i]] = (chain_starts, chain_stops)
+    return chain_limits
+
+
+def get_bounding_boxes(limitA, limitB, color="r"):
+    rect1 = patches.Rectangle(
+        (limitA[0] - 1, limitB[0] - 1),
+        limitA[1] - limitA[0],
+        limitB[1] - limitB[0],
+        linewidth=1,
+        edgecolor=color,
+        facecolor="none",
+    )
+    rect2 = patches.Rectangle(
+        (limitB[0] - 1, limitA[0] - 1),
+        limitB[1] - limitB[0],
+        limitA[1] - limitA[0],
+        linewidth=1,
+        edgecolor=color,
+        facecolor="none",
+    )
+    return rect1, rect2
+
+
 def load_features(filepath):
     with open(filepath, "rb") as p:
         features = pickle.load(p)
@@ -128,14 +162,12 @@ def compare_to_native(filepath, pdb_path, predicted_distances, chain1="A", chain
 
     compared_dist = np.triu(predicted_distances)
 
-    residues = [r for r in structure.get_residues()]
+    c_alphas = [r["CA"] for r in structure.get_residues()]
     
-    for i, residue_i in enumerate(residues):
-        atom1 = residue_i["CA"]
-        for j, residue_j in enumerate(residues):
+    for i, ca_i in enumerate(c_alphas):
+        for j, ca_j in enumerate(c_alphas):
             if j < i:
-                atom2 = residue_j["CA"]
-                dist = atom1 - atom2
+                dist = ca_i - ca_j
                 compared_dist[i, j] = min(dist, 22)
 
     if limitA and limitB:
@@ -157,27 +189,22 @@ def compare_to_native(filepath, pdb_path, predicted_distances, chain1="A", chain
         np.max([ax[0].get_xlim(), ax[0].get_ylim()]),  # max of both axes
     ]
     ax[0].plot(lims, lims, "k-", alpha=0.75, zorder=0)
-    ax[0].title.set_text("Distogram-model agreement")
-    ax[0].set_xlabel("Model Ca-Ca distances")
-    ax[0].set_ylabel("Distogram converted distances")
+    ax[0].set_xlabel("Model distances")
+    ax[0].set_ylabel("Distogram distances")
     
     ax[1].imshow(compared_dist)
-    plt.savefig(filepath)
+    ax[1].set_ylabel("Native distances →")
+    ax[1].set_xlabel("Distogram distances →")
+    ax[1].xaxis.set_label_position("top") 
+
+    if limitA and limitB:
+        # plots a bounding box if any
+        rect1, rect2 = get_bounding_boxes(limitA, limitB)
+        ax[1].add_patch(rect1)
+        ax[1].add_patch(rect2)        
+    plt.title("Distogram-model agreement")
+    plt.savefig(filepath, dpi=600)
     plt.close()
-
-
-def get_chain_limits(features):
-    chain_limits = {"A": (1, features["msa"].shape[1])}
-
-    if "asym_id" in features:  # then it's a multimer
-        chain_ids = features["asym_id"].astype("int")
-        for i in range(chain_ids[-1]):
-            chain_starts = np.where(chain_ids == i + 1)[0][0] + 1
-
-            chain_stops = np.where(chain_ids == i + 1)[0][-1] + 1
-
-            chain_limits[string.ascii_uppercase[i]] = (chain_starts, chain_stops)
-    return chain_limits
 
 
 def plot_distances(filepath, distances, pae=None, limitA=None, limitB=None):
@@ -195,22 +222,7 @@ def plot_distances(filepath, distances, pae=None, limitA=None, limitB=None):
 
     if limitA and limitB:
         # plots a bounding box if any
-        rect1 = patches.Rectangle(
-            (limitA[0] - 1, limitB[0] - 1),
-            limitA[1] - limitA[0],
-            limitB[1] - limitB[0],
-            linewidth=1,
-            edgecolor="r",
-            facecolor="none",
-        )
-        rect2 = patches.Rectangle(
-            (limitB[0] - 1, limitA[0] - 1),
-            limitB[1] - limitB[0],
-            limitA[1] - limitA[0],
-            linewidth=1,
-            edgecolor="r",
-            facecolor="none",
-        )
+        rect1, rect2 = get_bounding_boxes(limitA, limitB)
 
         if pae is not None:
             rect3 = copy(rect1)
@@ -222,7 +234,7 @@ def plot_distances(filepath, distances, pae=None, limitA=None, limitB=None):
         else:
             ax.add_patch(rect1)
             ax.add_patch(rect2)
-    plt.savefig(filepath)
+    plt.savefig(filepath, dpi=600)
     plt.close()
 
 
