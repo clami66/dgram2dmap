@@ -173,8 +173,6 @@ def compare_to_native(
     filepath,
     pdb_path,
     predicted_distances,
-    chain1="A",
-    chain2="A",
     limitA=None,
     limitB=None,
 ):
@@ -210,8 +208,8 @@ def compare_to_native(
     )
 
     ax[0].imshow(compared_dist)
-    ax[0].set_ylabel("← Native distances")
-    ax[0].set_xlabel("Distogram distances →")
+    ax[0].set_ylabel("← PDB Model")
+    ax[0].set_xlabel("Distogram →")
     ax[0].xaxis.set_label_position("top")
 
     ax[1].set_xlim(0, 22)
@@ -223,8 +221,8 @@ def compare_to_native(
         np.max([ax[1].get_xlim(), ax[1].get_ylim()]),  # max of both axes
     ]
     ax[1].plot(lims, lims, "k-", alpha=0.75, zorder=0)
-    ax[1].set_xlabel("Model distances")
-    ax[1].set_ylabel("Predicted distances")
+    ax[1].set_xlabel("PDB model distances")
+    ax[1].set_ylabel("Distogram distances")
 
     # ax[1].set_yticklabels([])
 
@@ -234,7 +232,7 @@ def compare_to_native(
         ax[0].add_patch(rect1)
         ax[0].add_patch(rect2)
 
-    ax[0].set_title("Distance map")
+    ax[0].set_title("Distance map comparison")
     ax[1].set_title("Distance agreement\n(bounded area)")
 
     plt.savefig(filepath, dpi=600)
@@ -320,18 +318,13 @@ def main():
                     out.write(line)
 
         if args.pdb:
-            if args.chains:
-                compare_to_native(
-                    f"{pickle_output}.agreement.png",
-                    args.pdb,
-                    dist,
-                    chain1,
-                    chain2,
-                    limitA,
-                    limitB,
-                )
-            else:
-                compare_to_native(f"{pickle_output}.agreement.png", args.pdb, dist)
+            compare_to_native(
+                f"{pickle_output}.agreement.png",
+                args.pdb,
+                dist,
+                limitA,
+                limitB,
+            )
 
 
 if __name__ == "__main__":
