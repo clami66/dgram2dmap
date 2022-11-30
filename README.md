@@ -14,7 +14,7 @@ Distances calculated this way agree quite well with the actual $C\alpha$ distanc
 # Usage 
 
 ```
-dgram2dmap.py [-h] [--maxD 20.0] [--limits i:j k:l] [--chains chain1 chain2] [--plot] [--rosetta] in_folder
+usage: dgram2dmap.py [-h] [--maxD 20.0] [--limits i:j k:l] [--chains chain1 chain2] [--plot] [--argmax] [--rosetta] [--pdb ranked_0.pdb] in_folder
 
 Extract and format distance constraints from AlphaFold distograms
 
@@ -28,7 +28,9 @@ optional arguments:
   --chains chain1 chain2
                         Extract constraints between two chains (e.g. A B)
   --plot                Plot the distances with bounding boxes
+  --argmax              Use argmax to find the most likely distance instead of interpolating
   --rosetta             Export below-threshold (see maxD) distances in a Rosetta constraint files
+  --pdb model.pdb       PDB model of the target protein (e.g. for comparisons against native)
 ```
 
 Example:

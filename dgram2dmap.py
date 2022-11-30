@@ -43,6 +43,9 @@ def add_arguments(parser):
         "--plot", help="Plot the distances with bounding boxes", action="store_true",
     )
     parser.add_argument(
+        "--argmax", help="Use argmax to find the most likely distance instead of interpolating", action="store_true",
+    )
+    parser.add_argument(
         "--rosetta",
         help="Export below-threshold (see maxD) distances in a Rosetta constraint files",
         action="store_true",
@@ -55,12 +58,17 @@ def add_arguments(parser):
     )
 
 
-def get_distance_predictions(results):
+def get_distance_predictions(results, interpolate=True):
     bin_edges = results["distogram"]["bin_edges"]
     bin_edges = np.insert(bin_edges, 0, 0)
 
-    distogram_softmax = softmax(results["distogram"]["logits"], axis=2)
-    distance_predictions = np.sum(np.multiply(distogram_softmax, bin_edges), axis=2)
+    
+    if interpolate:
+        distogram_softmax = softmax(results["distogram"]["logits"], axis=2)
+        distance_predictions = np.sum(np.multiply(distogram_softmax, bin_edges), axis=2)
+    else: # pick maximum probability distance instead
+        distogram_argmax = np.argmax(results["distogram"]["logits"][:, :, :63], axis=2) # skips last bin to avoid being too conservative
+        distance_predictions = bin_edges[distogram_argmax]
 
     return distance_predictions
 
@@ -106,11 +114,11 @@ def load_features(filepath):
     return features
 
 
-def load_results(filepath):
+def load_results(filepath, interpolate=True):
 
     with open(filepath, "rb") as p:
         results = pickle.load(p)
-        distance_predictions = get_distance_predictions(results)
+        distance_predictions = get_distance_predictions(results, interpolate)
         if "predicted_aligned_error" in results:
             pae = results["predicted_aligned_error"]
         else:
@@ -190,19 +198,22 @@ def compare_to_native(filepath, pdb_path, predicted_distances, chain1="A", chain
     ]
     ax[0].plot(lims, lims, "k-", alpha=0.75, zorder=0)
     ax[0].set_xlabel("Model distances")
-    ax[0].set_ylabel("Distogram distances")
+    ax[0].set_ylabel("Predicted distances")
     
     ax[1].imshow(compared_dist)
-    ax[1].set_ylabel("Native distances →")
+    ax[1].set_ylabel("← Native distances")
     ax[1].set_xlabel("Distogram distances →")
     ax[1].xaxis.set_label_position("top") 
+
+    ax[1].set_yticklabels([])
 
     if limitA and limitB:
         # plots a bounding box if any
         rect1, rect2 = get_bounding_boxes(limitA, limitB)
         ax[1].add_patch(rect1)
         ax[1].add_patch(rect2)        
-    plt.title("Distogram-model agreement")
+    ax[0].set_title("Distance agreement\n")
+    ax[1].set_title("Distance map")
     plt.savefig(filepath, dpi=600)
     plt.close()
 
@@ -260,12 +271,13 @@ def main():
         limitB = chain_limits[chain2]
 
     pickle_list = glob.glob(f"{args.in_folder}/result_*.pkl")
-
+    interpolate  = False if args.argmax else True
+    
     for i, pickle_output in enumerate(pickle_list):
         logging.warning(
             f"Processing pickle file {i+1}/{len(pickle_list)}: {pickle_output}"
         )
-        dist, pae = load_results(pickle_output)
+        dist, pae = load_results(pickle_output, interpolate=interpolate)
         np.savetxt(f"{pickle_output}.dmap", dist)
 
         if args.plot:
