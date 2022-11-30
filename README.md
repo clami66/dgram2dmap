@@ -8,7 +8,7 @@ The distances for the $i$-th residue are obtained by passing the distogram logit
 
 Distances calculated this way agree quite well with the actual $C\alpha$ distances extracted from a model (up until ~20Å). **Provided that the predicted aligned error is low**.
 
-![image](example/distogram_model_agreement.png)
+![image](example/result_model_1_ptm_pred_0.pkl.agreement.png)
 
 
 # Usage 
