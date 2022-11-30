@@ -15,7 +15,8 @@ from Bio.PDB import *
 
 def add_arguments(parser):
     parser.add_argument(
-        "in_folder", help="AlphaFold model output folder",
+        "in_folder",
+        help="AlphaFold model output folder",
     )
     parser.add_argument(
         "--maxD",
@@ -40,7 +41,14 @@ def add_arguments(parser):
         metavar=("chain1", "chain2"),
     )
     parser.add_argument(
-        "--plot", help="Plot the distances with bounding boxes", action="store_true",
+        "--plot",
+        help="Plot the distances with bounding boxes",
+        action="store_true",
+    )
+    parser.add_argument(
+        "--argmax",
+        help="Use argmax to find the most likely distance instead of interpolating",
+        action="store_true",
     )
     parser.add_argument(
         "--rosetta",
@@ -55,14 +63,54 @@ def add_arguments(parser):
     )
 
 
-def get_distance_predictions(results):
+def get_distance_predictions(results, interpolate=True):
     bin_edges = results["distogram"]["bin_edges"]
     bin_edges = np.insert(bin_edges, 0, 0)
 
-    distogram_softmax = softmax(results["distogram"]["logits"], axis=2)
-    distance_predictions = np.sum(np.multiply(distogram_softmax, bin_edges), axis=2)
+    if interpolate:
+        distogram_softmax = softmax(results["distogram"]["logits"], axis=2)
+        distance_predictions = np.sum(np.multiply(distogram_softmax, bin_edges), axis=2)
+    else:  # pick maximum probability distance instead
+        distogram_argmax = np.argmax(
+            results["distogram"]["logits"][:, :, :63], axis=2
+        )  # skips last bin to avoid being too conservative
+        distance_predictions = bin_edges[distogram_argmax]
 
     return distance_predictions
+
+
+def get_chain_limits(features):
+    chain_limits = {"A": (1, features["msa"].shape[1])}
+
+    if "asym_id" in features:  # then it's a multimer
+        chain_ids = features["asym_id"].astype("int")
+        for i in range(chain_ids[-1]):
+            chain_starts = np.where(chain_ids == i + 1)[0][0] + 1
+
+            chain_stops = np.where(chain_ids == i + 1)[0][-1] + 1
+
+            chain_limits[string.ascii_uppercase[i]] = (chain_starts, chain_stops)
+    return chain_limits
+
+
+def get_bounding_boxes(limitA, limitB, color="r"):
+    rect1 = patches.Rectangle(
+        (limitA[0] - 1, limitB[0] - 1),
+        limitA[1] - limitA[0],
+        limitB[1] - limitB[0],
+        linewidth=1,
+        edgecolor=color,
+        facecolor="none",
+    )
+    rect2 = patches.Rectangle(
+        (limitB[0] - 1, limitA[0] - 1),
+        limitB[1] - limitB[0],
+        limitA[1] - limitA[0],
+        linewidth=1,
+        edgecolor=color,
+        facecolor="none",
+    )
+    return rect1, rect2
 
 
 def load_features(filepath):
@@ -72,11 +120,11 @@ def load_features(filepath):
     return features
 
 
-def load_results(filepath):
+def load_results(filepath, interpolate=True):
 
     with open(filepath, "rb") as p:
         results = pickle.load(p)
-        distance_predictions = get_distance_predictions(results)
+        distance_predictions = get_distance_predictions(results, interpolate)
         if "predicted_aligned_error" in results:
             pae = results["predicted_aligned_error"]
         else:
@@ -121,48 +169,76 @@ def get_rosetta_constraints(
     return constraints
 
 
-def compare_to_native(filepath, pdb_path, predicted_distances):
+def compare_to_native(
+    filepath,
+    pdb_path,
+    predicted_distances,
+    chain1="A",
+    chain2="A",
+    limitA=None,
+    limitB=None,
+):
 
     parser = PDBParser()
     structure = parser.get_structure("model", pdb_path)
 
-    real_dist = np.zeros_like(predicted_distances)
+    compared_dist = np.triu(predicted_distances)
 
-    for i in range(1, predicted_distances.shape[0] + 1):
-        atom1 = structure[0]["A"][i]["CA"]
-        for j in range(i, predicted_distances.shape[0] + 1):
-            atom2 = structure[0]["A"][j]["CA"]
-            real_dist[i - 1, j - 1] = real_dist[j - 1, i - 1] = atom1 - atom2
+    c_alphas = [r["CA"] for r in structure.get_residues()]
 
-    fig1, ax = plt.subplots()
+    for i, ca_i in enumerate(c_alphas):
+        for j, ca_j in enumerate(c_alphas):
+            if j < i:
+                dist = ca_i - ca_j
+                compared_dist[i, j] = min(dist, 22)
 
-    ax.set_xlim(0, 20)
-    ax.set_ylim(0, 20)
-    ax.set_box_aspect(1)
-    plt.scatter(real_dist.reshape(-1), predicted_distances.reshape(-1))
+    if limitA and limitB:
+        predicted_distances = predicted_distances[
+            limitA[0] - 1 : limitA[1], limitB[0] - 1 : limitB[1]
+        ]
+        real_dist = np.zeros_like(predicted_distances)
+        real_dist = np.transpose(
+            compared_dist[limitB[0] - 1 : limitB[1], limitA[0] - 1 : limitA[1]]
+        )
+    else:
+        predicted_distances = np.triu(predicted_distances)
+        real_dist = np.transpose(np.tril(compared_dist))
+
+    fig, ax = plt.subplots(1, 2)
+    plt.subplots_adjust(
+        left=0.1, bottom=0.1, right=0.9, top=0.9, wspace=0.4, hspace=0.4
+    )
+
+    ax[0].imshow(compared_dist)
+    ax[0].set_ylabel("← Native distances")
+    ax[0].set_xlabel("Distogram distances →")
+    ax[0].xaxis.set_label_position("top")
+
+    ax[1].set_xlim(0, 22)
+    ax[1].set_ylim(0, 22)
+    ax[1].set_box_aspect(1)
+    ax[1].scatter(real_dist.reshape(-1), predicted_distances.reshape(-1))
     lims = [
-        np.min([ax.get_xlim(), ax.get_ylim()]),  # min of both axes
-        np.max([ax.get_xlim(), ax.get_ylim()]),  # max of both axes
+        np.min([ax[1].get_xlim(), ax[1].get_ylim()]),  # min of both axes
+        np.max([ax[1].get_xlim(), ax[1].get_ylim()]),  # max of both axes
     ]
-    ax.plot(lims, lims, "k-", alpha=0.75, zorder=0)
-    ax.title.set_text("Distogram-model distance agreement")
-    ax.set_xlabel("Model Ca-Ca distances")
-    ax.set_ylabel("Distogram converted distances")
-    plt.savefig(filepath)
+    ax[1].plot(lims, lims, "k-", alpha=0.75, zorder=0)
+    ax[1].set_xlabel("Model distances")
+    ax[1].set_ylabel("Predicted distances")
 
+    # ax[1].set_yticklabels([])
 
-def get_chain_limits(features):
-    chain_limits = {"A": (1, features["msa"].shape[1])}
+    if limitA and limitB:
+        # plots a bounding box if any
+        rect1, rect2 = get_bounding_boxes(limitA, limitB)
+        ax[0].add_patch(rect1)
+        ax[0].add_patch(rect2)
 
-    if "asym_id" in features:  # then it's a multimer
-        chain_ids = features["asym_id"].astype("int")
-        for i in range(chain_ids[-1]):
-            chain_starts = np.where(chain_ids == i + 1)[0][0] + 1
+    ax[0].set_title("Distance map")
+    ax[1].set_title("Distance agreement\n(bounded area)")
 
-            chain_stops = np.where(chain_ids == i + 1)[0][-1] + 1
-
-            chain_limits[string.ascii_uppercase[i]] = (chain_starts, chain_stops)
-    return chain_limits
+    plt.savefig(filepath, dpi=600)
+    plt.close()
 
 
 def plot_distances(filepath, distances, pae=None, limitA=None, limitB=None):
@@ -180,22 +256,7 @@ def plot_distances(filepath, distances, pae=None, limitA=None, limitB=None):
 
     if limitA and limitB:
         # plots a bounding box if any
-        rect1 = patches.Rectangle(
-            (limitA[0] - 1, limitB[0] - 1),
-            limitA[1] - limitA[0],
-            limitB[1] - limitB[0],
-            linewidth=1,
-            edgecolor="r",
-            facecolor="none",
-        )
-        rect2 = patches.Rectangle(
-            (limitB[0] - 1, limitA[0] - 1),
-            limitB[1] - limitB[0],
-            limitA[1] - limitA[0],
-            linewidth=1,
-            edgecolor="r",
-            facecolor="none",
-        )
+        rect1, rect2 = get_bounding_boxes(limitA, limitB)
 
         if pae is not None:
             rect3 = copy(rect1)
@@ -207,7 +268,7 @@ def plot_distances(filepath, distances, pae=None, limitA=None, limitB=None):
         else:
             ax.add_patch(rect1)
             ax.add_patch(rect2)
-    plt.savefig(filepath)
+    plt.savefig(filepath, dpi=600)
     plt.close()
 
 
@@ -233,12 +294,13 @@ def main():
         limitB = chain_limits[chain2]
 
     pickle_list = glob.glob(f"{args.in_folder}/result_*.pkl")
+    interpolate = False if args.argmax else True
 
     for i, pickle_output in enumerate(pickle_list):
         logging.warning(
             f"Processing pickle file {i+1}/{len(pickle_list)}: {pickle_output}"
         )
-        dist, pae = load_results(pickle_output)
+        dist, pae = load_results(pickle_output, interpolate=interpolate)
         np.savetxt(f"{pickle_output}.dmap", dist)
 
         if args.plot:
@@ -258,7 +320,18 @@ def main():
                     out.write(line)
 
         if args.pdb:
-            compare_to_native(f"{pickle_output}.agreement.png", args.pdb, dist)
+            if args.chains:
+                compare_to_native(
+                    f"{pickle_output}.agreement.png",
+                    args.pdb,
+                    dist,
+                    chain1,
+                    chain2,
+                    limitA,
+                    limitB,
+                )
+            else:
+                compare_to_native(f"{pickle_output}.agreement.png", args.pdb, dist)
 
 
 if __name__ == "__main__":
