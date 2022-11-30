@@ -205,7 +205,12 @@ def compare_to_native(
         real_dist = np.transpose(np.tril(compared_dist))
 
     fig, ax = plt.subplots(1, 2)
-    fig.tight_layout()
+    plt.subplots_adjust(left=0.1,
+        bottom=0.1,
+        right=0.9,
+        top=0.9,
+        wspace=0.4,
+        hspace=0.4)
 
     ax[0].imshow(compared_dist)
     ax[0].set_ylabel("← Native distances")
