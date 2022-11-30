@@ -207,7 +207,8 @@ def compare_to_native(
         left=0.1, bottom=0.1, right=0.9, top=0.9, wspace=0.4, hspace=0.4
     )
 
-    ax[0].imshow(compared_dist)
+    d = ax[0].imshow(compared_dist)
+    plt.colorbar(d, ax=ax[0], fraction=0.046, pad=0.04)
     ax[0].set_ylabel("← PDB Model")
     ax[0].set_xlabel("Distogram →")
     ax[0].xaxis.set_label_position("top")
@@ -243,13 +244,17 @@ def plot_distances(filepath, distances, pae=None, limitA=None, limitB=None):
 
     if pae is not None:
         fig, ax = plt.subplots(1, 2)
-        ax[0].imshow(distances)
-        ax[1].imshow(pae)
+        d = ax[0].imshow(distances)
+        plt.colorbar(d, ax=ax[0], fraction=0.046, pad=0.04)
+        p = ax[1].imshow(pae)
+        plt.colorbar(p, ax=ax[1], fraction=0.046, pad=0.04)
         ax[0].title.set_text("Distance map")
         ax[1].title.set_text("Predicted aligned error")
+        ax[1].set_xticks([])
     else:
         fig, ax = plt.subplots()
-        ax.imshow(distances)
+        d = ax.imshow(distances)
+        plt.colorbar(d, ax=ax, fraction=0.046, pad=0.04)
         ax.title.set_text("Distance map")
 
     if limitA and limitB:
@@ -266,6 +271,7 @@ def plot_distances(filepath, distances, pae=None, limitA=None, limitB=None):
         else:
             ax.add_patch(rect1)
             ax.add_patch(rect2)
+    
     plt.savefig(filepath, dpi=600)
     plt.close()
 
