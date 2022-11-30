@@ -48,5 +48,6 @@ Which will produce the following outputs for each pickle file (see also `example
 * `result_model_1_ptm_pred_0.pkl.rosetta_constraints`: rosetta constraint file from selected ranges
 * `result_model_1_ptm_pred_0.pkl.dmap`: CSV file with all distances calculated from the distogram
 * `result_model_1_ptm_pred_0.pkl.dmap.png`: image of the calculated distances (with selection range boxes, if any). The predicted aligned error is also shown if present:
+* `result_model_1_ptm_pred_0.pkl.agreement.png`: comparison between model (lower corner) and distogram (upper corner) distance map, scatter plot of model vs. distogram distances in range boxes (see plot above)
 
 ![distance map plot](example/result_model_1_ptm_pred_0.pkl.dmap.png)
