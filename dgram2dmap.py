@@ -173,8 +173,6 @@ def compare_to_native(
     filepath,
     pdb_path,
     predicted_distances,
-    chain1="A",
-    chain2="A",
     limitA=None,
     limitB=None,
 ):
@@ -320,18 +318,13 @@ def main():
                     out.write(line)
 
         if args.pdb:
-            if args.chains:
-                compare_to_native(
-                    f"{pickle_output}.agreement.png",
-                    args.pdb,
-                    dist,
-                    chain1,
-                    chain2,
-                    limitA,
-                    limitB,
-                )
-            else:
-                compare_to_native(f"{pickle_output}.agreement.png", args.pdb, dist)
+            compare_to_native(
+                f"{pickle_output}.agreement.png",
+                args.pdb,
+                dist,
+                limitA,
+                limitB,
+            )
 
 
 if __name__ == "__main__":
