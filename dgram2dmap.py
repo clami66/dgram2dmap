@@ -15,7 +15,8 @@ from Bio.PDB import *
 
 def add_arguments(parser):
     parser.add_argument(
-        "in_folder", help="AlphaFold model output folder",
+        "in_folder",
+        help="AlphaFold model output folder",
     )
     parser.add_argument(
         "--maxD",
@@ -40,10 +41,14 @@ def add_arguments(parser):
         metavar=("chain1", "chain2"),
     )
     parser.add_argument(
-        "--plot", help="Plot the distances with bounding boxes", action="store_true",
+        "--plot",
+        help="Plot the distances with bounding boxes",
+        action="store_true",
     )
     parser.add_argument(
-        "--argmax", help="Use argmax to find the most likely distance instead of interpolating", action="store_true",
+        "--argmax",
+        help="Use argmax to find the most likely distance instead of interpolating",
+        action="store_true",
     )
     parser.add_argument(
         "--rosetta",
@@ -62,12 +67,13 @@ def get_distance_predictions(results, interpolate=True):
     bin_edges = results["distogram"]["bin_edges"]
     bin_edges = np.insert(bin_edges, 0, 0)
 
-    
     if interpolate:
         distogram_softmax = softmax(results["distogram"]["logits"], axis=2)
         distance_predictions = np.sum(np.multiply(distogram_softmax, bin_edges), axis=2)
-    else: # pick maximum probability distance instead
-        distogram_argmax = np.argmax(results["distogram"]["logits"][:, :, :63], axis=2) # skips last bin to avoid being too conservative
+    else:  # pick maximum probability distance instead
+        distogram_argmax = np.argmax(
+            results["distogram"]["logits"][:, :, :63], axis=2
+        )  # skips last bin to avoid being too conservative
         distance_predictions = bin_edges[distogram_argmax]
 
     return distance_predictions
@@ -163,7 +169,15 @@ def get_rosetta_constraints(
     return constraints
 
 
-def compare_to_native(filepath, pdb_path, predicted_distances, chain1="A", chain2="A", limitA=None, limitB=None):
+def compare_to_native(
+    filepath,
+    pdb_path,
+    predicted_distances,
+    chain1="A",
+    chain2="A",
+    limitA=None,
+    limitB=None,
+):
 
     parser = PDBParser()
     structure = parser.get_structure("model", pdb_path)
@@ -171,7 +185,7 @@ def compare_to_native(filepath, pdb_path, predicted_distances, chain1="A", chain
     compared_dist = np.triu(predicted_distances)
 
     c_alphas = [r["CA"] for r in structure.get_residues()]
-    
+
     for i, ca_i in enumerate(c_alphas):
         for j, ca_j in enumerate(c_alphas):
             if j < i:
@@ -179,41 +193,48 @@ def compare_to_native(filepath, pdb_path, predicted_distances, chain1="A", chain
                 compared_dist[i, j] = min(dist, 22)
 
     if limitA and limitB:
-        predicted_distances = predicted_distances[limitA[0] - 1:limitA[1], limitB[0] - 1:limitB[1]]
+        predicted_distances = predicted_distances[
+            limitA[0] - 1 : limitA[1], limitB[0] - 1 : limitB[1]
+        ]
         real_dist = np.zeros_like(predicted_distances)
-        real_dist = np.transpose(compared_dist[limitB[0] - 1:limitB[1], limitA[0] - 1:limitA[1]])
+        real_dist = np.transpose(
+            compared_dist[limitB[0] - 1 : limitB[1], limitA[0] - 1 : limitA[1]]
+        )
     else:
         predicted_distances = np.triu(predicted_distances)
         real_dist = np.transpose(np.tril(compared_dist))
 
-    fig1, ax = plt.subplots(1, 2)
+    fig, ax = plt.subplots(1, 2)
+    fig.tight_layout()
 
-    ax[0].set_xlim(0, 22)
-    ax[0].set_ylim(0, 22)
-    ax[0].set_box_aspect(1)
-    ax[0].scatter(real_dist.reshape(-1), predicted_distances.reshape(-1))
+    ax[0].imshow(compared_dist)
+    ax[0].set_ylabel("← Native distances")
+    ax[0].set_xlabel("Distogram distances →")
+    ax[0].xaxis.set_label_position("top")
+
+    ax[1].set_xlim(0, 22)
+    ax[1].set_ylim(0, 22)
+    ax[1].set_box_aspect(1)
+    ax[1].scatter(real_dist.reshape(-1), predicted_distances.reshape(-1))
     lims = [
-        np.min([ax[0].get_xlim(), ax[0].get_ylim()]),  # min of both axes
-        np.max([ax[0].get_xlim(), ax[0].get_ylim()]),  # max of both axes
+        np.min([ax[1].get_xlim(), ax[1].get_ylim()]),  # min of both axes
+        np.max([ax[1].get_xlim(), ax[1].get_ylim()]),  # max of both axes
     ]
-    ax[0].plot(lims, lims, "k-", alpha=0.75, zorder=0)
-    ax[0].set_xlabel("Model distances")
-    ax[0].set_ylabel("Predicted distances")
-    
-    ax[1].imshow(compared_dist)
-    ax[1].set_ylabel("← Native distances")
-    ax[1].set_xlabel("Distogram distances →")
-    ax[1].xaxis.set_label_position("top") 
+    ax[1].plot(lims, lims, "k-", alpha=0.75, zorder=0)
+    ax[1].set_xlabel("Model distances")
+    ax[1].set_ylabel("Predicted distances")
 
-    ax[1].set_yticklabels([])
+    # ax[1].set_yticklabels([])
 
     if limitA and limitB:
         # plots a bounding box if any
         rect1, rect2 = get_bounding_boxes(limitA, limitB)
-        ax[1].add_patch(rect1)
-        ax[1].add_patch(rect2)        
-    ax[0].set_title("Distance agreement\n")
-    ax[1].set_title("Distance map")
+        ax[0].add_patch(rect1)
+        ax[0].add_patch(rect2)
+
+    ax[0].set_title("Distance map")
+    ax[1].set_title("Distance agreement\n(bounded area)")
+
     plt.savefig(filepath, dpi=600)
     plt.close()
 
@@ -271,8 +292,8 @@ def main():
         limitB = chain_limits[chain2]
 
     pickle_list = glob.glob(f"{args.in_folder}/result_*.pkl")
-    interpolate  = False if args.argmax else True
-    
+    interpolate = False if args.argmax else True
+
     for i, pickle_output in enumerate(pickle_list):
         logging.warning(
             f"Processing pickle file {i+1}/{len(pickle_list)}: {pickle_output}"
@@ -298,7 +319,15 @@ def main():
 
         if args.pdb:
             if args.chains:
-                compare_to_native(f"{pickle_output}.agreement.png", args.pdb, dist, chain1, chain2, limitA, limitB)
+                compare_to_native(
+                    f"{pickle_output}.agreement.png",
+                    args.pdb,
+                    dist,
+                    chain1,
+                    chain2,
+                    limitA,
+                    limitB,
+                )
             else:
                 compare_to_native(f"{pickle_output}.agreement.png", args.pdb, dist)
 
