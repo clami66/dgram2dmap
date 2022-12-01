@@ -8,7 +8,13 @@ The distances for a residue pair $(i, j)$ are obtained by passing the distogram 
 
 Distances calculated this way agree quite well with the actual $C\alpha$ distances extracted from a model (up until ~20Å), provided that the predicted aligned error is low.
 
+# Examples
+
+dgram2dmap allows to plot the converted distance maps and compare them with the predicted aligned error, while highlighting distances between numbered subsets of amino acids or chain identifiers:
+
 ![distance map and PAE](example/result_model_1_ptm_pred_0.pkl.dmap.png)
+
+It also allows to compare against a 3D model:
 
 ![agreement with 3D model](example/result_model_1_ptm_pred_0.pkl.agreement.png)
 
