@@ -2,7 +2,7 @@
 
 Convert AlphaFold distograms into distance matrices and save them into a number of formats.
 
-The distances for the $i$-th residue are obtained by passing the distogram logits through a softmax function, then performing a linear combination between the distogram bin edges $edge$ and the softmax output $softmax(distogram_{i,j})$ for each distance bin $b$:
+The distances for a residue pair $(i, j)$ are obtained by passing the distogram logits through a softmax function, then performing a linear combination between the distogram bin edges $edge$ and the softmax output $softmax(distogram_{i,j})$ for each distance bin $b$:
 
  $$ dist_{i,j} = \sum_{b=1}^{64} {softmax(distogram_{i,j})}_b * edge_b $$
 
