@@ -61,6 +61,13 @@ def add_arguments(parser):
         required=False,
         metavar="ranked_0.pdb",
     )
+    parser.add_argument(
+        "--rosetta_format",
+        help="Format of rosetta constraint function with placeholder {} for distances",
+        required=False,
+        metavar="'HARMONIC {} 1.0'",
+        default="'HARMONIC {:.2f} 1.0 TAG'",
+    )
 
 
 def get_distance_predictions(results, interpolate=True):
@@ -134,7 +141,7 @@ def load_results(filepath, interpolate=True):
 
 def get_rosetta_constraints(
     dist_matrix,
-    func_type="HARMONIC",
+    func_format="HARMONIC {:.2f} 1.0 TAG",
     atom_name="CA",
     maxD=20.0,
     SD=1.0,
@@ -158,13 +165,14 @@ def get_rosetta_constraints(
         for j in range(y0, y1):
             dist = 0.5 * (dist_matrix[i, j] + dist_matrix[j, i])
             if dist < maxD:
+                function = func_format.format(dist)
                 if chain1 and chain2:
                     constraints.append(
-                        f"AtomPair {atom_name} {i+1-x0}{chain1} {atom_name} {j+1-y0}{chain2} {func_type} {dist:.2f} {SD} TAG\n"
+                        f"AtomPair {atom_name} {i+1-x0}{chain1} {atom_name} {j+1-y0}{chain2} {function}\n"
                     )
                 else:
                     constraints.append(
-                        f"AtomPair {atom_name} {i+1} {atom_name} {j+1} {func_type} {dist:.2f} {SD} TAG\n"
+                        f"AtomPair {atom_name} {i+1} {atom_name} {j+1} {function}\n"
                     )
     return constraints
 
@@ -224,8 +232,6 @@ def compare_to_native(
     ax[1].plot(lims, lims, "k-", alpha=0.75, zorder=0)
     ax[1].set_xlabel("PDB model distances")
     ax[1].set_ylabel("Distogram distances")
-
-    # ax[1].set_yticklabels([])
 
     if limitA and limitB:
         # plots a bounding box if any
@@ -313,6 +319,7 @@ def main():
         if args.rosetta:
             rosetta_constraints = get_rosetta_constraints(
                 dist,
+                func_format=args.rosetta_format,
                 maxD=args.maxD,
                 chain1=chain1,
                 chain2=chain2,
