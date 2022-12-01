@@ -8,7 +8,9 @@ The distances for a residue pair $(i, j)$ are obtained by passing the distogram 
 
 Distances calculated this way agree quite well with the actual $C\alpha$ distances extracted from a model (up until ~20Å), provided that the predicted aligned error is low.
 
-![image](example/result_model_1_ptm_pred_0.pkl.agreement.png)
+![distance map and PAE](example/result_model_1_ptm_pred_0.pkl.dmap.png)
+
+![agreement with 3D model](example/result_model_1_ptm_pred_0.pkl.agreement.png)
 
 
 # Usage 
@@ -50,4 +52,3 @@ Which will produce the following outputs for each pickle file (see also `example
 * `result_model_1_ptm_pred_0.pkl.dmap.png`: image of the calculated distances (with selection range boxes, if any). The predicted aligned error is also shown if present:
 * `result_model_1_ptm_pred_0.pkl.agreement.png`: comparison between model (lower corner) and distogram (upper corner) distance map, scatter plot of model vs. distogram distances in range boxes (see plot above)
 
-![distance map plot](example/result_model_1_ptm_pred_0.pkl.dmap.png)
