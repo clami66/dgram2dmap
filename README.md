@@ -2,9 +2,9 @@
 
 Convert AlphaFold distograms into distance matrices and save them into a number of formats.
 
-The distances for the $i$-th residue are obtained by passing the distogram logits through a softmax function, then performing a linear combination between the distogram bin edges $edge$ and the softmax output $softD$ for each bin $b$:
+The distances for the $i$-th residue are obtained by passing the distogram logits through a softmax function, then performing a linear combination between the distogram bin edges $edge$ and the softmax output $softD$ for each distance bin $b$:
 
- $$ dist_i = \sum_{b=0}^B {softD}_{i,b} * edge_b $$
+ $$ dist_{i,j} = \sum_{b=1}^{64} {softmax(logits_{i,j})}_b * edge_b $$
 
 Distances calculated this way agree quite well with the actual $C\alpha$ distances extracted from a model (up until ~20Å). **Provided that the predicted aligned error is low**.
 
