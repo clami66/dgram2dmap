@@ -202,7 +202,7 @@ def compare_to_native(
         predicted_distances = np.triu(predicted_distances)
         real_dist = np.transpose(np.tril(compared_dist))
 
-    fig, ax = plt.subplots(1, 2)
+    fig, ax = plt.subplots(1, 2, gridspec_kw={"width_ratios": [1, 0.9]})
     plt.subplots_adjust(
         left=0.1, bottom=0.1, right=0.9, top=0.9, wspace=0.4, hspace=0.4
     )
@@ -212,7 +212,7 @@ def compare_to_native(
     ax[0].set_ylabel("← PDB Model")
     ax[0].set_xlabel("Distogram →")
     ax[0].xaxis.set_label_position("top")
-
+    ax[0].set_yticks([])
     ax[1].set_xlim(0, 22)
     ax[1].set_ylim(0, 22)
     ax[1].set_box_aspect(1)
@@ -250,7 +250,7 @@ def plot_distances(filepath, distances, pae=None, limitA=None, limitB=None):
         plt.colorbar(p, ax=ax[1], fraction=0.046, pad=0.04)
         ax[0].title.set_text("Distance map")
         ax[1].title.set_text("Predicted aligned error")
-        ax[1].set_xticks([])
+        ax[1].set_yticks([])
     else:
         fig, ax = plt.subplots()
         d = ax.imshow(distances)
