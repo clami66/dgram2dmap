@@ -190,7 +190,7 @@ def compare_to_native(
 
     compared_dist = np.triu(predicted_distances)
 
-    c_alphas = [r["CA"] for r in structure.get_residues()]
+    c_alphas = [r["CB"] if "CB" in r else r["CA"] for r in structure.get_residues()]
 
     for i, ca_i in enumerate(c_alphas):
         for j, ca_j in enumerate(c_alphas):
